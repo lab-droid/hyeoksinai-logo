@@ -123,19 +123,37 @@ export default function App() {
   const [logoCount, setLogoCount] = useState(1);
   
   const [isGenerating, setIsGenerating] = useState(false);
+  const [patchNotes, setPatchNotes] = useState<PatchNote[]>(PATCH_NOTES);
+  const [livePatchVersion, setLivePatchVersion] = useState("V1.0.1");
+
+  useEffect(() => {
+    const fetchPatchNotes = async () => {
+      try {
+        const res = await fetch(`./patch-notes.json?t=${new Date().getTime()}`);
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            setPatchNotes(data);
+            if (data.length > 0) {
+              setLivePatchVersion(data[0].version.toUpperCase());
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch patch notes", err);
+      }
+    };
+
+    fetchPatchNotes();
+    // 심리스한 실시간 폴링 갱신
+    const timer = setInterval(fetchPatchNotes, 30000); 
+    return () => clearInterval(timer);
+  }, []);
   const [regeneratingIndices, setRegeneratingIndices] = useState<number[]>([]);
   const [progress, setProgress] = useState(0);
   const [generatedImageUrls, setGeneratedImageUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  // Auto-close usage modal on first load if key is already there?
-  useEffect(() => {
-    const hasSeenUsage = localStorage.getItem('hasSeenUsage');
-    if (!hasSeenUsage) {
-      setShowUsageModal(true);
-      localStorage.setItem('hasSeenUsage', 'true');
-    }
-  }, []);
 
   const handleGenerate = async () => {
     if (!brandName) {
@@ -323,8 +341,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans flex flex-col select-none overflow-x-hidden">
-      <header className="h-16 px-6 flex items-center justify-between bg-black/40 border-b border-white/5 shrink-0 sticky top-0 z-40 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#030305] text-zinc-100 font-sans flex flex-col select-none overflow-x-hidden relative">
+      {/* Background Enhancements */}
+      <div className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-900/20 blur-[150px] rounded-full mix-blend-screen"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-indigo-900/20 blur-[150px] rounded-full mix-blend-screen"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+      </div>
+      
+      <header className="h-16 px-6 flex items-center justify-between bg-white/[0.01] border-b border-white/5 shrink-0 sticky top-0 z-40 backdrop-blur-3xl">
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] ${isGenerating ? 'bg-amber-500 shadow-amber-500/50' : 'bg-emerald-500'}`}></div>
           <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">
@@ -361,9 +386,13 @@ export default function App() {
           </button>
           <button 
             onClick={() => setShowPatchNotes(true)}
-            className="px-4 py-2 bg-white text-black rounded-full text-[10px] font-black hover:bg-zinc-200 transition-all shadow-lg shadow-white/5 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-[10px] font-black hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-900/50 active:scale-95"
           >
-            패치노트 V1.0.1
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-40"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            패치노트 {livePatchVersion}
           </button>
         </div>
       </header>
@@ -371,9 +400,11 @@ export default function App() {
       {/* 메인 콘텐츠 벤토 그리드 */}
       <main className="flex-1 p-6 lg:p-10 max-w-[1600px] mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-6">
         
-        <div className="md:col-span-4 space-y-6">
-          <div className="bg-zinc-900/50 rounded-[2rem] border border-white/5 p-8 shadow-2xl backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-8">
+        <div className="md:col-span-4 space-y-6 relative z-10">
+          <div className="bg-zinc-950/40 rounded-[2.5rem] border border-white/10 p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between mb-8 relative z-10">
               <div>
                 <h2 className="text-xl font-black text-white tracking-tight">로고 빌더</h2>
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">BRAND IDENTITY DESIGN</p>
@@ -405,6 +436,7 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">브랜드 산업군</label>
                   <select 
@@ -423,33 +455,34 @@ export default function App() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">로고 생성 개수</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">핵심 감성 및 페르소나</label>
                   <select 
-                    value={logoCount}
-                    onChange={(e) => setLogoCount(parseInt(e.target.value))}
+                    value={mood}
+                    onChange={(e) => setMood(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
                   >
-                    {[1, 2, 3, 4, 5].map(num => (
-                      <option key={num} value={num} className="bg-zinc-900">{num}개 생성</option>
-                    ))}
+                    <option value="professional" className="bg-zinc-900">전문적인 (Professional)</option>
+                    <option value="friendly" className="bg-zinc-900">친근한 (Friendly)</option>
+                    <option value="energetic" className="bg-zinc-900">열정적인 (Energetic)</option>
+                    <option value="luxurious" className="bg-zinc-900">럭셔리한 (Luxurious)</option>
+                    <option value="playful" className="bg-zinc-900">활기찬 (Playful)</option>
+                    <option value="stoic" className="bg-zinc-900">안정적인 (Stoic)</option>
+                    <option value="innovative" className="bg-zinc-900">혁신적인 (Innovative)</option>
+                    <option value="minimal" className="bg-zinc-900">미니멀한 (Minimal)</option>
                   </select>
                 </div>
+              </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">핵심 감성 및 페르소나</label>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">로고 생성 개수</label>
                 <select 
-                  value={mood}
-                  onChange={(e) => setMood(e.target.value)}
+                  value={logoCount}
+                  onChange={(e) => setLogoCount(parseInt(e.target.value))}
                   className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
                 >
-                  <option value="professional" className="bg-zinc-900">전문적인 (Professional)</option>
-                  <option value="friendly" className="bg-zinc-900">친근한 (Friendly)</option>
-                  <option value="energetic" className="bg-zinc-900">열정적인 (Energetic)</option>
-                  <option value="luxurious" className="bg-zinc-900">럭셔리한 (Luxurious)</option>
-                  <option value="playful" className="bg-zinc-900">활기찬 (Playful)</option>
-                  <option value="stoic" className="bg-zinc-900">안정적인 (Stoic)</option>
-                  <option value="innovative" className="bg-zinc-900">혁신적인 (Innovative)</option>
-                  <option value="minimal" className="bg-zinc-900">미니멀한 (Minimal)</option>
+                  {[1, 2, 3, 4, 5].map(num => (
+                    <option key={num} value={num} className="bg-zinc-900">{num}개 생성</option>
+                  ))}
                 </select>
               </div>
 
@@ -909,18 +942,22 @@ export default function App() {
         </div>
       </Modal>
 
-      <Modal title="업데이트 패치노트" isOpen={showPatchNotes} onClose={() => setShowPatchNotes(false)}>
-        <div className="space-y-10 py-2">
-          {PATCH_NOTES.map((note, idx) => (
-            <div key={idx} className="space-y-5 p-8 bg-white/5 rounded-[2.5rem] border border-white/5">
+      <Modal title="실시간 업데이트 패치노트" isOpen={showPatchNotes} onClose={() => setShowPatchNotes(false)}>
+        <div className="space-y-6 py-2">
+          {patchNotes.map((note, idx) => (
+            <div key={idx} className="space-y-5 p-8 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 relative overflow-hidden">
+              {idx === 0 && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>}
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-black text-white tracking-tighter italic">{note.version}</span>
+                <span className="text-3xl font-black text-white tracking-tighter italic flex items-center gap-3">
+                  {note.version}
+                  {idx === 0 && <span className="text-[10px] font-black tracking-widest bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full not-italic">LATEST</span>}
+                </span>
                 <span className="text-[10px] font-black text-zinc-500 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full tracking-widest">{note.date}</span>
               </div>
               <ul className="space-y-4">
                 {note.changes.map((change, cIdx) => (
-                  <li key={cIdx} className="flex gap-4 text-sm font-bold text-zinc-400 leading-relaxed">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0"></div>
+                  <li key={cIdx} className="flex gap-4 text-sm font-bold text-zinc-300 leading-relaxed">
+                    <div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${idx === 0 ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]' : 'bg-zinc-600'}`}></div>
                     {change}
                   </li>
                 ))}
