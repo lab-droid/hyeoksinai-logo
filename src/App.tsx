@@ -121,6 +121,7 @@ export default function App() {
   const [typography, setTypography] = useState('Modern Sans-Serif');
   const [finish, setFinish] = useState('Flat Design');
   const [logoCount, setLogoCount] = useState(1);
+  const [referenceImageData, setReferenceImageData] = useState<string | null>(null);
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>(PATCH_NOTES);
@@ -181,7 +182,7 @@ export default function App() {
         const stepProgress = Math.floor((i / logoCount) * 100);
         setProgress(stepProgress + 5);
         
-        const promptOptimizer = `당신은 세계적인 로고 디자이너 및 브랜드 전략가이자 서체 전문가입니다. 아래 정보를 바탕으로 AI 이미지 생성 모델을 위한 아주 상세하고 예술적인 로고 생성 프롬프트를 작성하세요. 현재 생성 옵션 #${i + 1}입니다.
+        let promptOptimizer = `당신은 세계적인 로고 디자이너 및 브랜드 전략가이자 서체 전문가입니다. 아래 정보를 바탕으로 AI 이미지 생성 모델을 위한 아주 상세하고 예술적인 로고 생성 프롬프트를 작성하세요. 현재 생성 옵션 #${i + 1}입니다.
         
 브랜드 명칭: ${brandName}
 슬로건: ${slogan}
@@ -203,10 +204,22 @@ export default function App() {
 5. 옵션 #${i + 1}에 맞춰서 이전과는 약간 다른 구도나 스타일적 변주를 주어 생성하세요.
 6. 불필요한 서술 없이 프롬프트 텍스트만 출력하세요.`;
 
+        let partsForOptimizer: any[] = [];
+        
+        if (referenceImageData) {
+           promptOptimizer += `\n7. [위 내용에 더하여 중요] 사용자가 제공한 첨부 참고 이미지를 참고하여 그 주된 스타일, 형태, 색감, 감성을 깊게 분석하여 새 로고 디자인에 그 특징들이 분명하게 반영되도록 영문 프롬프트에 구체적으로 묘사하세요. 원본 요소를 단순히 베끼지 말고 주어진 브랜드 정보와 융합하세요.`;
+           partsForOptimizer = [
+              { text: promptOptimizer },
+              { inlineData: { data: referenceImageData.split(',')[1], mimeType: referenceImageData.split(',')[0].split(':')[1].split(';')[0] } }
+           ];
+        } else {
+           partsForOptimizer = [{ text: promptOptimizer }];
+        }
+
         setProgress(stepProgress + 15);
         const optimizationResponse = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
-          contents: promptOptimizer
+          contents: { parts: partsForOptimizer }
         });
         const optimizedPrompt = optimizationResponse.text?.trim() || `Professional premium logo for ${brandName}, ${industry} industry, ${style} style, ${colorTheme} colors, high quality, vector style, featuring perfectly rendered Korean text "${brandName}"`;
         
@@ -256,7 +269,7 @@ export default function App() {
     setRegeneratingIndices(prev => [...prev, index]);
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const promptOptimizer = `당신은 세계적인 로고 디자이너이자 브랜드 전략가입니다.
+      let promptOptimizer = `당신은 세계적인 로고 디자이너이자 브랜드 전략가입니다.
 브랜드 명칭: ${brandName}
 슬로건: ${slogan}
 산업군: ${industry}
@@ -273,9 +286,20 @@ export default function App() {
 한글 "${brandName}" 텍스트가 깨짐 없이 완벽하게 렌더링되어야 함을 강력하게 지시하세요.
 결과는 오직 영문 프롬프트 1개만 출력하세요.`;
 
+      let partsForOptimizer: any[] = [];
+      if (referenceImageData) {
+         promptOptimizer += `\n[추가 중요 지시사항] 사용자가 첨부한 참고 이미지의 스타일, 톤앤매너, 형태를 분석하여 이번 로고의 디자인 지시문에 강하게 반영하세요.`;
+         partsForOptimizer = [
+            { text: promptOptimizer },
+            { inlineData: { data: referenceImageData.split(',')[1], mimeType: referenceImageData.split(',')[0].split(':')[1].split(';')[0] } }
+         ];
+      } else {
+         partsForOptimizer = [{ text: promptOptimizer }];
+      }
+
       const optimizationResponse = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: promptOptimizer
+        contents: { parts: partsForOptimizer }
       });
       const optimizedPrompt = optimizationResponse.text?.trim() || `Premium logo for ${brandName}, ${style} style, Korean text "${brandName}"`;
       
@@ -333,6 +357,21 @@ export default function App() {
       link.download = `logo_${brandName}_${index + 1}.png`;
       link.click();
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReferenceImageData(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeReferenceImage = () => {
+    setReferenceImageData(null);
   };
 
   const saveApiKey = () => {
@@ -580,6 +619,36 @@ export default function App() {
                     <option value="Neon Glow" className="bg-zinc-900">네온 글로우 (Neon)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">참고 이미지 (선택사항)</label>
+                {referenceImageData ? (
+                  <div className="relative w-full h-32 rounded-xl overflow-hidden border border-white/10 group">
+                    <img src={referenceImageData} alt="Reference" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                      <button
+                        onClick={removeReferenceImage}
+                        className="px-4 py-2 bg-red-500/80 text-white rounded-full text-xs font-bold hover:bg-red-500 transition-colors"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative w-full">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="w-full h-32 flex flex-col items-center justify-center bg-white/5 border border-white/5 border-dashed rounded-xl text-zinc-500 hover:border-blue-500/50 hover:bg-white/10 transition-all">
+                      <ImageIcon className="w-6 h-6 mb-2 opacity-50" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">클릭하거나 파일 드래그 (JPG/PNG)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error && (
