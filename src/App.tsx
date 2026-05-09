@@ -483,13 +483,29 @@ export default function App() {
                     onChange={(e) => setIndustry(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
                   >
-                    <option value="tech" className="bg-zinc-900">IT / 테크놀로지</option>
-                    <option value="beauty" className="bg-zinc-900">뷰티 / 패션 브랜드</option>
-                    <option value="food" className="bg-zinc-900">음식점 / 카페 / F&B</option>
-                    <option value="finance" className="bg-zinc-900">금융 / 법률 / 전문직</option>
-                    <option value="education" className="bg-zinc-900">교육 / 연구 기관</option>
-                    <option value="medical" className="bg-zinc-900">의료 / 헬스케어</option>
-                    <option value="creative" className="bg-zinc-900">크리에이티브 스튜디오</option>
+                    <option value="tech" className="bg-zinc-900">IT / 테크 / 스타트업</option>
+                    <option value="food" className="bg-zinc-900">요식업 / 프랜차이즈</option>
+                    <option value="cafe" className="bg-zinc-900">카페 / 베이커리</option>
+                    <option value="beauty" className="bg-zinc-900">뷰티 / 코스메틱</option>
+                    <option value="fashion" className="bg-zinc-900">패션 / 의류 / 잡화</option>
+                    <option value="medical" className="bg-zinc-900">병원 / 의료 / 헬스케어</option>
+                    <option value="fitness" className="bg-zinc-900">피트니스 / 스포츠 / 요가</option>
+                    <option value="finance" className="bg-zinc-900">금융 / 투자 / 보험</option>
+                    <option value="professional" className="bg-zinc-900">법률 / 세무 / 전문직</option>
+                    <option value="education" className="bg-zinc-900">교육 / 학원 / 인강</option>
+                    <option value="interior" className="bg-zinc-900">건설 / 인테리어 / 건축</option>
+                    <option value="realestate" className="bg-zinc-900">부동산 / 숙박업</option>
+                    <option value="mobility" className="bg-zinc-900">자동차 / 모빌리티</option>
+                    <option value="travel" className="bg-zinc-900">여행 / 레저 / 항공</option>
+                    <option value="media" className="bg-zinc-900">엔터 / 미디어 / 방송</option>
+                    <option value="game" className="bg-zinc-900">게임 / 이스포츠</option>
+                    <option value="pet" className="bg-zinc-900">반려동물 / 동물병원</option>
+                    <option value="ecommerce" className="bg-zinc-900">쇼핑몰 / e커머스</option>
+                    <option value="creative" className="bg-zinc-900">디자인 / 크리에이티브 스튜디오</option>
+                    <option value="eco" className="bg-zinc-900">친환경 / 에코 / 농업</option>
+                    <option value="manufacturing" className="bg-zinc-900">제조업 / 공업</option>
+                    <option value="logistics" className="bg-zinc-900">물류 / 유통</option>
+                    <option value="other" className="bg-zinc-900">기타 산업군</option>
                   </select>
                 </div>
 
