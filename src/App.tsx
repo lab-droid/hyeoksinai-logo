@@ -22,7 +22,14 @@ import {
   FileImage,
   Eye,
   EyeOff,
-  Coins
+  Coins,
+  Sparkles,
+  Cpu,
+  Coffee,
+  Heart,
+  Shield,
+  Compass,
+  Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -63,6 +70,7 @@ const USAGE_STEPS = [
   { id: 3, title: '생성하기', description: '버튼을 클릭하면 AI가 디자인 핵심을 분석하여 로고를 생성합니다.' },
   { id: 4, title: '결과 확인', description: '생성된 로고 이미지를 확인하고 필요시 재시도할 수 있습니다.' }
 ];
+
 
 // --- Components ---
 
@@ -122,6 +130,7 @@ export default function App() {
   const [finish, setFinish] = useState('Flat Design');
   const [logoCount, setLogoCount] = useState(1);
   const [referenceImageData, setReferenceImageData] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>(PATCH_NOTES);
@@ -156,6 +165,7 @@ export default function App() {
   const [generatedImageUrls, setGeneratedImageUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+
   const handleGenerate = async () => {
     if (!brandName) {
       setError('브랜드 명칭을 입력해주세요.');
@@ -187,6 +197,7 @@ export default function App() {
 브랜드 명칭: ${brandName}
 슬로건: ${slogan}
 산업군: ${industry}
+사용자 지정 추가 프롬프트 / 요구사항: ${customPrompt || '없음'}
 디자인 컨셉: ${concept}
 감성/분위기: ${mood}
 상징 요소: ${symbol}
@@ -273,6 +284,7 @@ export default function App() {
 브랜드 명칭: ${brandName}
 슬로건: ${slogan}
 산업군: ${industry}
+사용자 지정 추가 프롬프트 / 요구사항: ${customPrompt || '없음'}
 디자인 컨셉: ${concept}
 감성/분위기: ${mood}
 상징 요소: ${symbol}
@@ -554,6 +566,16 @@ export default function App() {
                   <option value="자연 및 식물 (Nature/Organic)" className="bg-zinc-900">자연 친화적 요소</option>
                   <option value="첨단 기술 패브릭 (Tech Mesh)" className="bg-zinc-900">IT 및 기술 상징</option>
                   <option value="엠블럼 타이포그래피 (Lettermark)" className="bg-zinc-900">글자 중심 이니셜형</option>
+                  {![
+                    "브랜드 명칭의 톤앤매너에 맞는 상징물",
+                    "추상적 도형 (Abstract Shape)",
+                    "동물 상징 (Animal Icon)",
+                    "자연 및 식물 (Nature/Organic)",
+                    "첨단 기술 패브릭 (Tech Mesh)",
+                    "엠블럼 타이포그래피 (Lettermark)"
+                  ].includes(symbol) && (
+                    <option value={symbol} className="bg-zinc-900 text-emerald-400 font-extrabold">{symbol}</option>
+                  )}
                 </select>
               </div>
 
@@ -571,6 +593,16 @@ export default function App() {
                     <option value="Soft Pastel Harmony" className="bg-zinc-900">파스텔 톤 (Pastel)</option>
                     <option value="High Contrast Vivid" className="bg-zinc-900">선명한 컬러 (Vivid)</option>
                     <option value="Natural Earth Tone" className="bg-zinc-900">어스톤 (Earth Tone)</option>
+                    {![
+                      "브랜드 명칭의 톤앤매너와 어울리는 색상톤",
+                      "Premium Black & Silver",
+                      "Corporate Blue & White",
+                      "Soft Pastel Harmony",
+                      "High Contrast Vivid",
+                      "Natural Earth Tone"
+                    ].includes(colorTheme) && (
+                      <option value={colorTheme} className="bg-zinc-900 text-emerald-400 font-extrabold">{colorTheme}</option>
+                    )}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -665,6 +697,19 @@ export default function App() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">상세 요구사항 / 추가 프롬프트 (선택사항)</label>
+                  <span className="text-[9px] font-bold text-blue-400">자유 지시</span>
+                </div>
+                <textarea
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="예: '우주선 모양의 날카로운 심볼로 만들어줘', '로고 주위에 얇은 기하학 서클 가이드 라인을 그려주고 형광 네온 블루 컬러를 은은하게 채워주세요.'"
+                  className="w-full h-24 px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-zinc-700 text-white resize-none"
+                />
               </div>
 
               {error && (
