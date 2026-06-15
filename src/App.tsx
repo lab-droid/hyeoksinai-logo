@@ -29,7 +29,8 @@ import {
   Heart,
   Shield,
   Compass,
-  Briefcase
+  Briefcase,
+  Contrast
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -63,6 +64,15 @@ const PATCH_NOTES: PatchNote[] = [
     ]
   }
 ];
+
+// 사용 용도별 디자인 가이드 (프롬프트에 주입)
+const USAGE_GUIDE: Record<string, string> = {
+  general: '다양한 매체에 두루 쓰이는 범용 로고',
+  'app-icon': '앱/웹 아이콘 — 아주 작은 크기에서도 또렷하게 보이도록 단순화 최우선',
+  signage: '간판/사이니지 — 멀리서도 인지되는 강한 형태와 높은 대비',
+  businesscard: '명함/인쇄물 — 작은 인쇄에서도 깨끗하게 재현되는 선명한 형태',
+  package: '패키지/제품 — 다양한 배경 위에서도 돋보이는 형태',
+};
 
 const USAGE_STEPS = [
   { id: 1, title: 'API 키 설정', description: '우측 상단 설정 버튼을 통해 Google API 키를 입력하세요.' },
@@ -170,6 +180,12 @@ export default function App() {
   const [logoCount, setLogoCount] = useState(1);
   const [referenceImageData, setReferenceImageData] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
+  // 신규: 로고 형태(한글 깨짐 회피), 영문 표기, 사용 용도, 배경, 제외 요소
+  const [logoForm, setLogoForm] = useState('symbol-text'); // symbol-only | symbol-text | wordmark-en
+  const [brandNameEn, setBrandNameEn] = useState('');
+  const [usage, setUsage] = useState('general');
+  const [backgroundType, setBackgroundType] = useState('transparent'); // transparent | white
+  const [avoidElements, setAvoidElements] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>(PATCH_NOTES);
@@ -205,6 +221,54 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
 
+  // handleGenerate / handleRegenerateOne 공용 프롬프트 빌더
+  const buildOptimizerPrompt = (optionIndex: number): string => {
+    const displayName = logoForm === 'wordmark-en' ? (brandNameEn || brandName) : brandName;
+
+    const formInstruction =
+      logoForm === 'symbol-only'
+        ? `[로고 형태] 심볼 전용 — CRITICAL: 로고에 어떠한 글자/텍스트/숫자도 절대 포함하지 마세요. 오직 심볼(아이콘/마크)만 생성합니다. (Absolutely NO text, letters, or numbers — icon/symbol mark ONLY.)`
+        : logoForm === 'wordmark-en'
+        ? `[로고 형태] 영문 워드마크 — 영문 텍스트 "${displayName}"를 또렷하고 오타 없이 정확하게 렌더링하세요. 한글은 사용하지 마세요. (Render the English text "${displayName}" with crisp, legible, error-free typography. No Korean text.)`
+        : `[로고 형태] 심볼 + 한글 텍스트 — 심볼과 함께 한글 "${brandName}"을 포함하되 깨짐/오타 없이 정교하게 렌더링하세요. 글자 렌더링이 불확실하면 글자를 단순화하고 심볼을 강조하세요. (MANDATORY: Render the Korean text "${brandName}" with pristine clarity and zero artifacts.)`;
+
+    const backgroundInstruction =
+      backgroundType === 'white'
+        ? '깨끗한 순백색(#FFFFFF) 배경 위에 로고를 배치하세요.'
+        : '완전히 투명한 배경(PNG 알파 채널) 위에 로고만 단독으로 배치하세요. 배경색·캔버스·액자·그림자 잔상이 없어야 합니다. (Isolated on a fully transparent background, no backdrop.)';
+
+    const usageGuide = USAGE_GUIDE[usage] || USAGE_GUIDE.general;
+
+    return `당신은 세계적인 로고 디자이너이자 브랜드 전략가, 서체 전문가입니다. 아래 정보를 바탕으로 AI 이미지 생성 모델을 위한 상세한 '영문 프롬프트'를 작성하세요. 현재 생성 옵션 #${optionIndex + 1}입니다.
+
+브랜드 명칭: ${brandName}
+${brandNameEn ? `영문 표기: ${brandNameEn}` : ''}
+슬로건: ${slogan}
+산업군: ${industry}
+사용 용도: ${usageGuide}
+사용자 지정 추가 요구사항: ${customPrompt || '없음'}
+디자인 컨셉: ${concept}
+감성/분위기: ${mood}
+상징 요소: ${symbol}
+색상: ${colorTheme}
+스타일: ${style}
+레이아웃: ${layout}
+서체 스타일: ${typography}
+질감 및 마감: ${finish}
+
+${formInstruction}
+
+[로고 디자인 원칙 — 반드시 준수]
+1. 결과는 오직 '영문 프롬프트' 하나만 출력하세요. 불필요한 서술 금지.
+2. 좋은 로고의 핵심을 지키세요: simple, minimal, memorable, bold, clean vector shapes, generous negative space, 무엇보다 scalable — 아주 작은 크기(예: 16px)에서도 또렷하게 인지되어야 합니다.
+3. 사진처럼 사실적인 묘사, 과도한 디테일, 작게 줄이면 뭉개지는 복잡한 질감/노이즈는 피하세요. (선택한 마감 "${finish}"는 로고 가독성을 해치지 않는 선에서만 반영)
+4. ${backgroundInstruction}
+5. 이 로고는 "${usageGuide}" 용도에 최적화되어야 합니다.
+6. 옵션 #${optionIndex + 1}에 맞춰 이전과 다른 구도/스타일 변주를 주세요.
+${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (DO NOT include): ${avoidElements}` : ''}
+8. 브랜드 고유의 정체성을 시각적으로 극대화할 영감을 담되, 프롬프트 텍스트만 출력하세요.`;
+  };
+
   const handleGenerate = async () => {
     if (!brandName) {
       setError('브랜드 명칭을 입력해주세요.');
@@ -231,28 +295,7 @@ export default function App() {
         const stepProgress = Math.floor((i / logoCount) * 100);
         setProgress(stepProgress + 5);
         
-        let promptOptimizer = `당신은 세계적인 로고 디자이너 및 브랜드 전략가이자 서체 전문가입니다. 아래 정보를 바탕으로 AI 이미지 생성 모델을 위한 아주 상세하고 예술적인 로고 생성 프롬프트를 작성하세요. 현재 생성 옵션 #${i + 1}입니다.
-        
-브랜드 명칭: ${brandName}
-슬로건: ${slogan}
-산업군: ${industry}
-사용자 지정 추가 프롬프트 / 요구사항: ${customPrompt || '없음'}
-디자인 컨셉: ${concept}
-감성/분위기: ${mood}
-상징 요소: ${symbol}
-색상: ${colorTheme}
-스타일: ${style}
-레이아웃: ${layout}
-서체 스타일: ${typography}
-질감 및 마감: ${finish}
-
-[지침]
-1. 결과는 오직 '영문 프롬프트'만 하나로 출력하세요.
-2. 로고는 고해상도(8k), 벡터 스타일, 상업적 수준의 프리미엄 디자인이어야 합니다.
-3. 브랜드 이름인 "${brandName}"을 로고의 핵심 디자인 요소로 포함시키되, 반드시 '한글(Korean)' 서체를 깨짐이나 오류 없이 완벽하고 정교하게 렌더링하도록 지시하세요. (MANDATORY: Render the Korean text "${brandName}" with pristine clarity and Zero artifacts. The typography must be legible and artistically integrated.)
-4. 이 브랜드가 가진 고유한 정체성을 시각적으로 극대화할 수 있는 영감을 프롬프트에 담으세요.
-5. 옵션 #${i + 1}에 맞춰서 이전과는 약간 다른 구도나 스타일적 변주를 주어 생성하세요.
-6. 불필요한 서술 없이 프롬프트 텍스트만 출력하세요.`;
+        let promptOptimizer = buildOptimizerPrompt(i);
 
         let partsForOptimizer: any[] = [];
         
@@ -319,23 +362,7 @@ export default function App() {
     setRegeneratingIndices(prev => [...prev, index]);
     try {
       const ai = new GoogleGenAI({ apiKey });
-      let promptOptimizer = `당신은 세계적인 로고 디자이너이자 브랜드 전략가입니다.
-브랜드 명칭: ${brandName}
-슬로건: ${slogan}
-산업군: ${industry}
-사용자 지정 추가 프롬프트 / 요구사항: ${customPrompt || '없음'}
-디자인 컨셉: ${concept}
-감성/분위기: ${mood}
-상징 요소: ${symbol}
-색상: ${colorTheme}
-스타일: ${style}
-레이아웃: ${layout}
-서체 스타일: ${typography}
-질감 및 마감: ${finish}
-
-위 정보를 바탕으로 아주 창의적이고 프리미엄한 로고 생성 영문 프롬프트를 작성하세요. 
-한글 "${brandName}" 텍스트가 깨짐 없이 완벽하게 렌더링되어야 함을 강력하게 지시하세요.
-결과는 오직 영문 프롬프트 1개만 출력하세요.`;
+      let promptOptimizer = buildOptimizerPrompt(0);
 
       let partsForOptimizer: any[] = [];
       if (referenceImageData) {
@@ -409,6 +436,31 @@ export default function App() {
       link.download = `logo_${brandName}_${index + 1}.png`;
       link.click();
     }
+  };
+
+  // 흑백 단색 버전 저장 (투명도 유지 — RGB만 그레이스케일 변환)
+  const handleDownloadMono = (url: string, index: number) => {
+    const canvas = document.createElement('canvas');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+        d[i] = d[i + 1] = d[i + 2] = gray; // 알파(d[i+3])는 그대로 두어 투명 배경 유지
+      }
+      ctx.putImageData(imageData, 0, 0);
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `logo_${brandName}_${index + 1}_mono.png`;
+      link.click();
+    };
+    img.src = url;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -517,8 +569,8 @@ export default function App() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">슬로건</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={slogan}
                     onChange={(e) => setSlogan(e.target.value)}
                     placeholder="예: 미래를 그리는 혁신"
@@ -526,6 +578,35 @@ export default function App() {
                   />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">로고 형태</label>
+                <select
+                  value={logoForm}
+                  onChange={(e) => setLogoForm(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
+                >
+                  <option value="symbol-text" className="bg-zinc-900">심볼 + 한글 텍스트</option>
+                  <option value="symbol-only" className="bg-zinc-900">심볼만 (글자 없음 · 깨짐 방지 권장)</option>
+                  <option value="wordmark-en" className="bg-zinc-900">영문 워드마크 (English)</option>
+                </select>
+                <p className="text-[9px] font-bold text-zinc-600 leading-relaxed ml-1">
+                  ※ AI는 한글 렌더링에 오류가 잦습니다. 글자 깨짐이 거슬리면 '심볼만' 또는 '영문 워드마크'를 권장합니다.
+                </p>
+              </div>
+
+              {logoForm === 'wordmark-en' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">영문 표기 (워드마크용)</label>
+                  <input
+                    type="text"
+                    value={brandNameEn}
+                    onChange={(e) => setBrandNameEn(e.target.value)}
+                    placeholder="예: NEXTIN"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-zinc-700 text-white"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -591,6 +672,34 @@ export default function App() {
                     <option key={num} value={num} className="bg-zinc-900">{num}개 생성</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">사용 용도</label>
+                  <select
+                    value={usage}
+                    onChange={(e) => setUsage(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
+                  >
+                    <option value="general" className="bg-zinc-900">범용 (General)</option>
+                    <option value="app-icon" className="bg-zinc-900">앱/웹 아이콘</option>
+                    <option value="signage" className="bg-zinc-900">간판 / 사이니지</option>
+                    <option value="businesscard" className="bg-zinc-900">명함 / 인쇄물</option>
+                    <option value="package" className="bg-zinc-900">패키지 / 제품</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">배경</label>
+                  <select
+                    value={backgroundType}
+                    onChange={(e) => setBackgroundType(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
+                  >
+                    <option value="transparent" className="bg-zinc-900">투명 배경 (권장)</option>
+                    <option value="white" className="bg-zinc-900">흰색 배경</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -740,6 +849,17 @@ export default function App() {
               </div>
 
               <div className="space-y-2 pt-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">피하고 싶은 요소 (선택사항)</label>
+                <input
+                  type="text"
+                  value={avoidElements}
+                  onChange={(e) => setAvoidElements(e.target.value)}
+                  placeholder="예: 그라데이션, 사실적 사진, 글자, 복잡한 디테일"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-zinc-700 text-white"
+                />
+              </div>
+
+              <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">상세 요구사항 / 추가 프롬프트 (선택사항)</label>
                   <span className="text-[9px] font-bold text-blue-400">자유 지시</span>
@@ -851,18 +971,24 @@ export default function App() {
                            
                            {/* 이미지 하단 액션 바 - Always Visible */}
                            <div className="flex flex-col gap-2 p-1">
-                             <div className="grid grid-cols-2 gap-2">
-                               <button 
+                             <div className="grid grid-cols-3 gap-2">
+                               <button
                                  onClick={() => handleDownload(url, 'png', idx)}
                                  className="py-3 bg-white/5 border border-white/5 text-white rounded-xl font-black text-[9px] flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
                                >
-                                 <Download className="w-3 h-3 text-blue-500" /> PNG 저장
+                                 <Download className="w-3 h-3 text-blue-500" /> PNG
                                </button>
-                               <button 
+                               <button
                                  onClick={() => handleDownload(url, 'jpg', idx)}
                                  className="py-3 bg-white/5 border border-white/5 text-white rounded-xl font-black text-[9px] flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
                                >
-                                 <FileImage className="w-3 h-3 text-emerald-500" /> JPG 저장
+                                 <FileImage className="w-3 h-3 text-emerald-500" /> JPG
+                               </button>
+                               <button
+                                 onClick={() => handleDownloadMono(url, idx)}
+                                 className="py-3 bg-white/5 border border-white/5 text-white rounded-xl font-black text-[9px] flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
+                               >
+                                 <Contrast className="w-3 h-3 text-zinc-300" /> 흑백
                                </button>
                              </div>
                              <button 
