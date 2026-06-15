@@ -72,6 +72,45 @@ const USAGE_STEPS = [
 ];
 
 
+// --- Helpers ---
+
+/**
+ * Gemini API 에러를 사용자가 이해할 수 있는 한국어 안내 메시지로 변환합니다.
+ * 특히 429(RESOURCE_EXHAUSTED) 할당량 초과 시, 원문 JSON 대신 친절한 안내를 보여줍니다.
+ */
+const getFriendlyErrorMessage = (err: any): string => {
+  const raw = (err?.message || String(err) || '').toString();
+  const status = err?.status ?? err?.code;
+
+  const isQuota =
+    status === 429 ||
+    raw.includes('"code":429') ||
+    raw.includes('RESOURCE_EXHAUSTED') ||
+    raw.toLowerCase().includes('quota');
+
+  if (isQuota) {
+    return 'API 사용 할당량을 초과했습니다. 이미지 생성 모델은 무료 등급에서 사용할 수 없으니, Google AI Studio 또는 Cloud Console에서 해당 API 키 프로젝트에 결제(유료 등급)를 활성화한 뒤 다시 시도해주세요.';
+  }
+
+  const isAuth =
+    status === 400 ||
+    status === 401 ||
+    status === 403 ||
+    raw.includes('API_KEY_INVALID') ||
+    raw.includes('PERMISSION_DENIED') ||
+    raw.toLowerCase().includes('api key not valid');
+
+  if (isAuth) {
+    return 'API 키가 유효하지 않거나 권한이 없습니다. 우측 상단 "API 인증 설정"에서 올바른 Gemini API 키를 입력했는지 확인해주세요.';
+  }
+
+  // 그 외 에러는 첫 줄만 노출하여 거대한 JSON 원문 노출을 방지합니다.
+  const firstLine = raw.split('\n')[0]?.trim();
+  return firstLine && firstLine.length < 200
+    ? firstLine
+    : '로고 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+};
+
 // --- Components ---
 
 const Modal = ({ title, isOpen, onClose, children }: { title: string, isOpen: boolean, onClose: () => void, children: React.ReactNode }) => (
@@ -268,7 +307,7 @@ export default function App() {
       setProgress(100);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || '로고 생성 중 오류가 발생했습니다.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsGenerating(false);
     }
@@ -336,6 +375,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setRegeneratingIndices(prev => prev.filter(i => i !== index));
     }
