@@ -185,6 +185,7 @@ export default function App() {
   const [brandNameEn, setBrandNameEn] = useState('');
   const [usage, setUsage] = useState('general');
   const [backgroundType, setBackgroundType] = useState('transparent'); // transparent | white
+  const [aspectRatio, setAspectRatio] = useState('1:1'); // 1:1 | 4:3 | 16:9 | 3:4
   const [avoidElements, setAvoidElements] = useState('');
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -237,6 +238,13 @@ export default function App() {
         ? '깨끗한 순백색(#FFFFFF) 배경 위에 로고를 배치하세요.'
         : '완전히 투명한 배경(PNG 알파 채널) 위에 로고만 단독으로 배치하세요. 배경색·캔버스·액자·그림자 잔상이 없어야 합니다. (Isolated on a fully transparent background, no backdrop.)';
 
+    const orientationInstruction =
+      aspectRatio === '1:1'
+        ? '정사각형(1:1) 캔버스에 균형 잡힌 구도로 배치하세요.'
+        : aspectRatio === '3:4'
+        ? '세로로 긴 직사각형(3:4) 캔버스에 맞춘 세로형 구도(심볼 위, 텍스트 아래 등)로 배치하세요. (Vertical lockup.)'
+        : `가로로 긴 직사각형(${aspectRatio}) 캔버스에 맞춘 가로형 구도(심볼 왼쪽, 텍스트 오른쪽 등 horizontal lockup)로 배치하세요.`;
+
     const usageGuide = USAGE_GUIDE[usage] || USAGE_GUIDE.general;
 
     return `당신은 세계적인 로고 디자이너이자 브랜드 전략가, 서체 전문가입니다. 아래 정보를 바탕으로 AI 이미지 생성 모델을 위한 상세한 '영문 프롬프트'를 작성하세요. 현재 생성 옵션 #${optionIndex + 1}입니다.
@@ -263,10 +271,11 @@ ${formInstruction}
 2. 좋은 로고의 핵심을 지키세요: simple, minimal, memorable, bold, clean vector shapes, generous negative space, 무엇보다 scalable — 아주 작은 크기(예: 16px)에서도 또렷하게 인지되어야 합니다.
 3. 사진처럼 사실적인 묘사, 과도한 디테일, 작게 줄이면 뭉개지는 복잡한 질감/노이즈는 피하세요. (선택한 마감 "${finish}"는 로고 가독성을 해치지 않는 선에서만 반영)
 4. ${backgroundInstruction}
-5. 이 로고는 "${usageGuide}" 용도에 최적화되어야 합니다.
-6. 옵션 #${optionIndex + 1}에 맞춰 이전과 다른 구도/스타일 변주를 주세요.
-${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (DO NOT include): ${avoidElements}` : ''}
-8. 브랜드 고유의 정체성을 시각적으로 극대화할 영감을 담되, 프롬프트 텍스트만 출력하세요.`;
+5. ${orientationInstruction}
+6. 이 로고는 "${usageGuide}" 용도에 최적화되어야 합니다.
+7. 옵션 #${optionIndex + 1}에 맞춰 이전과 다른 구도/스타일 변주를 주세요.
+${avoidElements ? `8. 다음 요소는 로고에 절대 포함하지 마세요 (DO NOT include): ${avoidElements}` : ''}
+9. 브랜드 고유의 정체성을 시각적으로 극대화할 영감을 담되, 프롬프트 텍스트만 출력하세요.`;
   };
 
   const handleGenerate = async () => {
@@ -324,7 +333,7 @@ ${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (
           },
           config: {
             imageConfig: {
-              aspectRatio: "1:1",
+              aspectRatio: aspectRatio,
               imageSize: "1K"
             }
           }
@@ -384,7 +393,7 @@ ${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (
       const imageResponse = await ai.models.generateContent({
         model: 'gemini-3.1-flash-image-preview',
         contents: { parts: [{ text: optimizedPrompt }] },
-        config: { imageConfig: { aspectRatio: "1:1", imageSize: "1K" } }
+        config: { imageConfig: { aspectRatio: aspectRatio, imageSize: "1K" } }
       });
 
       const candidates = imageResponse.candidates;
@@ -703,6 +712,20 @@ ${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (
               </div>
 
               <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">로고 비율 (형태)</label>
+                <select
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
+                >
+                  <option value="1:1" className="bg-zinc-900">정사각형 (1:1)</option>
+                  <option value="4:3" className="bg-zinc-900">가로형 직사각형 (4:3)</option>
+                  <option value="16:9" className="bg-zinc-900">와이드 가로형 (16:9)</option>
+                  <option value="3:4" className="bg-zinc-900">세로형 직사각형 (3:4)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">희망 상징물 (Symbol)</label>
                 <select 
                   value={symbol}
@@ -952,10 +975,10 @@ ${avoidElements ? `7. 다음 요소는 로고에 절대 포함하지 마세요 (
                            </div>
                            
                            <div className="relative aspect-square overflow-hidden rounded-[2.5rem] shadow-2xl border border-white/10 group">
-                             <img 
-                               src={url} 
-                               alt={`Generated Logo ${idx + 1}`} 
-                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                             <img
+                               src={url}
+                               alt={`Generated Logo ${idx + 1}`}
+                               className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                                referrerPolicy="no-referrer"
                              />
                              {regeneratingIndices.includes(idx) && (
