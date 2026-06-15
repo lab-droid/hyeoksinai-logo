@@ -184,7 +184,7 @@ export default function App() {
   const [logoForm, setLogoForm] = useState('symbol-text'); // symbol-only | symbol-text | wordmark-en
   const [brandNameEn, setBrandNameEn] = useState('');
   const [usage, setUsage] = useState('general');
-  const [backgroundType, setBackgroundType] = useState('transparent'); // transparent | white
+  const [backgroundType, setBackgroundType] = useState('white'); // white | transparent
   const [aspectRatio, setAspectRatio] = useState('1:1'); // 1:1 | 4:3 | 16:9 | 3:4
   const [avoidElements, setAvoidElements] = useState('');
   
@@ -705,8 +705,8 @@ ${avoidElements ? `8. 다음 요소는 로고에 절대 포함하지 마세요 (
                     onChange={(e) => setBackgroundType(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs font-bold outline-none focus:border-blue-500 focus:bg-white/10 transition-all text-white appearance-none cursor-pointer"
                   >
-                    <option value="transparent" className="bg-zinc-900">투명 배경 (권장)</option>
-                    <option value="white" className="bg-zinc-900">흰색 배경</option>
+                    <option value="white" className="bg-zinc-900">흰색 배경 (권장)</option>
+                    <option value="transparent" className="bg-zinc-900">투명 배경</option>
                   </select>
                 </div>
               </div>
